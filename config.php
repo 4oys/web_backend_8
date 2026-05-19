@@ -23,10 +23,21 @@ function getDBConnection() {
 }
 
 function generateLogin($name, $phone) {
-    $base = strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', strtok($name, ' ')));
-    $phone_suffix = substr(preg_replace('/[^0-9]/', '', $phone), -4);
-    return $base . '_' . $phone_suffix . '_' . rand(100, 999);
+    $firstName = trim(strtok($name, ' ')); 
+    $firstName = preg_replace('/[^a-zA-Zа-яА-Я]/u', '', $firstName); 
+    $firstName = strtolower($firstName); 
+    
+    if (empty($firstName)) {
+        $firstName = 'user';
+    }
+    
+    $phoneSuffix = substr(preg_replace('/[^0-9]/', '', $phone), -4);
+    
+    $random = rand(100, 999);
+    
+    return $firstName . '_' . $phoneSuffix . '_' . $random;
 }
+
 
 function generatePassword($length = 8) {
     $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
