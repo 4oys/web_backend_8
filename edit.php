@@ -19,78 +19,82 @@ try {
     die("Ошибка подключения к базе данных: " . $e->getMessage());
 }
 
-// Получаем ID заявки из URL
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-
-if ($id <= 0) {
-    die("Неверный ID заявки");
-}
-
-// Получаем данные заявки
-$stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ?");
-$stmt->execute([$id]);
-$request = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$request) {
-    die("Заявка не найдена");
-}
-
 $message = '';
 $error = '';
+$request = null;
+$isAuthenticated = false;
 
-// Обработка редактирования
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    
-    // Проверяем, что пользователь ввёл правильный логин и пароль
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'login') {
     $login = trim($_POST['login'] ?? '');
     $password = trim($_POST['password'] ?? '');
     
     if (empty($login) || empty($password)) {
-        $error = "Введите логин и пароль для подтверждения";
+        $error = "Введите логин и пароль";
     } else {
-        // Проверяем логин и пароль
-        $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ? AND login = ?");
-        $stmt->execute([$id, $login]);
-        $check = $stmt->fetch();
+        $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE login = ?");
+        $stmt->execute([$login]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if (!$check || !password_verify($password, $check['password_hash'])) {
-            $error = "Неверный логин или пароль";
+        if ($user && password_verify($password, $user['password_hash'])) {
+            $_SESSION['edit_login'] = $user['login'];
+            $_SESSION['edit_id'] = $user['id'];
+            $isAuthenticated = true;
+            $request = $user;
+            $message = "✅ Вы успешно вошли!";
         } else {
-            // Валидация новых данных
-            $name = trim($_POST['name'] ?? '');
-            $phone = trim($_POST['phone'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $wishes = trim($_POST['wishes'] ?? '');
-            
-            $errors = [];
-            if (empty($name)) $errors[] = "Имя обязательно";
-            if (empty($phone)) $errors[] = "Телефон обязателен";
-            if (empty($email)) $errors[] = "Email обязателен";
-            if (!preg_match('/^(\+7|8)[0-9]{10}$/', $phone)) $errors[] = "Неверный формат телефона";
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Неверный email";
-            
-            if (empty($errors)) {
-                $stmt = $pdo->prepare("
-                    UPDATE autofinder_requests 
-                    SET name = ?, phone = ?, email = ?, wishes = ?, updated_at = NOW()
-                    WHERE id = ? AND login = ?
-                ");
-                $stmt->execute([$name, $phone, $email, $wishes, $id, $login]);
-                
-                $message = "✅ Заявка успешно обновлена!";
-                
-                // Обновляем данные для отображения
-                $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ?");
-                $stmt->execute([$id]);
-                $request = $stmt->fetch();
-            } else {
-                $error = implode("<br>", $errors);
-            }
+            $error = "Неверный логин или пароль";
         }
     }
 }
 
-$allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java', 'Haskell', 'Clojure', 'Prolog', 'Scala', 'Go'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'save') {
+    if (empty($_SESSION['edit_login']) || empty($_SESSION['edit_id'])) {
+        $error = "Пожалуйста, войдите снова";
+    } else {
+        $name = trim($_POST['name'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $wishes = trim($_POST['wishes'] ?? '');
+        
+        $errors = [];
+        if (empty($name)) $errors[] = "Имя обязательно";
+        if (empty($phone)) $errors[] = "Телефон обязателен";
+        if (empty($email)) $errors[] = "Email обязателен";
+        if (!preg_match('/^(\+7|8)[0-9]{10}$/', $phone)) $errors[] = "Неверный формат телефона";
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Неверный email";
+        
+        if (empty($errors)) {
+            $stmt = $pdo->prepare("
+                UPDATE autofinder_requests 
+                SET name = ?, phone = ?, email = ?, wishes = ?, updated_at = NOW()
+                WHERE id = ? AND login = ?
+            ");
+            $stmt->execute([$name, $phone, $email, $wishes, $_SESSION['edit_id'], $_SESSION['edit_login']]);
+            $message = "✅ Заявка успешно обновлена!";
+            
+            $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ?");
+            $stmt->execute([$_SESSION['edit_id']]);
+            $request = $stmt->fetch();
+        } else {
+            $error = implode("<br>", $errors);
+            $request = [
+                'name' => $name,
+                'phone' => $phone,
+                'email' => $email,
+                'wishes' => $wishes
+            ];
+        }
+    }
+}
+
+if (empty($request) && !empty($_SESSION['edit_login']) && !empty($_SESSION['edit_id'])) {
+    $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ? AND login = ?");
+    $stmt->execute([$_SESSION['edit_id'], $_SESSION['edit_login']]);
+    $request = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($request) {
+        $isAuthenticated = true;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -110,7 +114,7 @@ $allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java'
             align-items: center;
         }
         .container {
-            max-width: 600px;
+            max-width: 550px;
             width: 100%;
             background: white;
             border-radius: 24px;
@@ -124,6 +128,7 @@ $allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java'
             text-align: center;
         }
         .header h1 { font-size: 24px; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: 0.9; }
         .form-body { padding: 32px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #1f2937; }
@@ -154,7 +159,7 @@ $allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java'
             border-radius: 12px;
             margin-bottom: 20px;
         }
-        .btn-save {
+        .btn {
             width: 100%;
             padding: 14px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -166,19 +171,19 @@ $allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java'
             cursor: pointer;
             margin-top: 16px;
         }
-        .btn-save:hover { transform: translateY(-2px); }
-        hr { margin: 20px 0; border: none; border-top: 1px solid #e5e7eb; }
-        .auth-info {
-            background: #f3f4f6;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 24px;
+        .btn:hover { transform: translateY(-2px); }
+        .btn-logout {
+            background: #ef4444;
+            margin-top: 10px;
         }
+        .btn-logout:hover { background: #dc2626; }
         .back-link {
             display: inline-block;
             margin-top: 20px;
             color: #667eea;
             text-decoration: none;
+            text-align: center;
+            width: 100%;
         }
     </style>
 </head>
@@ -186,7 +191,7 @@ $allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java'
 <div class="container">
     <div class="header">
         <h1>✏️ Редактирование заявки</h1>
-        <p>Измените данные своей заявки</p>
+        <p>Войдите, чтобы изменить свои данные</p>
     </div>
     
     <div class="form-body">
@@ -199,50 +204,61 @@ $allowedLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java'
             <div class="error">❌ <?= $error ?></div>
         <?php endif; ?>
         
-        <div class="auth-info">
-            <p><strong>🔐 Для редактирования введите ваш логин и пароль</strong></p>
-            <p><small>Логин: <?= htmlspecialchars($request['login']) ?></small></p>
-        </div>
+        <?php if (!$isAuthenticated): ?>
+            <form method="POST">
+                <input type="hidden" name="action" value="login">
+                
+                <div class="form-group">
+                    <label class="required">Логин</label>
+                    <input type="text" name="login" placeholder="Введите ваш логин" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="required">Пароль</label>
+                    <input type="password" name="password" placeholder="Введите ваш пароль" required>
+                </div>
+                
+                <button type="submit" class="btn">🔐 Войти</button>
+            </form>
+            
+        <?php else: ?>
+            <form method="POST">
+                <input type="hidden" name="action" value="save">
+                
+                <div class="form-group">
+                    <label class="required">Имя</label>
+                    <input type="text" name="name" value="<?= htmlspecialchars($request['name']) ?>" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="required">Телефон</label>
+                    <input type="tel" name="phone" value="<?= htmlspecialchars($request['phone']) ?>" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="required">Email</label>
+                    <input type="email" name="email" value="<?= htmlspecialchars($request['email']) ?>" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Пожелания к авто</label>
+                    <textarea name="wishes" rows="4"><?= htmlspecialchars($request['wishes']) ?></textarea>
+                </div>
+                
+                <button type="submit" class="btn">💾 Сохранить изменения</button>
+            </form>
+            
+            <form method="POST">
+                <input type="hidden" name="action" value="logout">
+                <button type="submit" class="btn btn-logout">🚪 Выйти</button>
+            </form>
+            
+        <?php endif; ?>
         
-        <form method="POST">
-            <div class="form-group">
-                <label>Логин</label>
-                <input type="text" name="login" placeholder="Ваш логин" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Пароль</label>
-                <input type="password" name="password" placeholder="Ваш пароль" required>
-            </div>
-            
-            <hr>
-            
-            <div class="form-group">
-                <label class="required">Имя</label>
-                <input type="text" name="name" value="<?= htmlspecialchars($request['name']) ?>" required>
-            </div>
-            
-            <div class="form-group">
-                <label class="required">Телефон</label>
-                <input type="tel" name="phone" value="<?= htmlspecialchars($request['phone']) ?>" required>
-            </div>
-            
-            <div class="form-group">
-                <label class="required">Email</label>
-                <input type="email" name="email" value="<?= htmlspecialchars($request['email']) ?>" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Пожелания к авто</label>
-                <textarea name="wishes" rows="4"><?= htmlspecialchars($request['wishes']) ?></textarea>
-            </div>
-            
-            <button type="submit" class="btn-save">💾 Сохранить изменения</button>
-        </form>
-        
-        <div style="text-align: center;">
+        <div>
             <a href="index.html" class="back-link">← Вернуться на главную</a>
         </div>
+        
     </div>
 </div>
 </body>
