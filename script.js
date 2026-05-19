@@ -151,7 +151,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
 
     const callbackForm = document.getElementById('callbackForm');
-    if (callbackForm) {
+    const modalBody = document.querySelector('.modal-body');
+    
+    if (callbackForm && modalBody) {
+
+        let modalResult = document.getElementById('modalResult');
+        if (!modalResult) {
+            modalResult = document.createElement('div');
+            modalResult.id = 'modalResult';
+            modalResult.style.marginTop = '20px';
+            modalResult.style.padding = '15px';
+            modalResult.style.borderRadius = '10px';
+            modalResult.style.display = 'none';
+            modalBody.appendChild(modalResult);
+        }
+        
         callbackForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -168,6 +182,11 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.textContent = 'Отправка...';
             submitBtn.disabled = true;
             
+            modalResult.style.display = 'block';
+            modalResult.innerHTML = '⏳ Отправка...';
+            modalResult.style.background = '#e3f2fd';
+            modalResult.style.color = '#0d47a1';
+            
             try {
                 const response = await fetch('/web_backend_8/api.php', {
                     method: 'POST',
@@ -177,18 +196,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert(`✅ Заявка принята!\nЛогин: ${result.login}\nПароль: ${result.password}\nСохраните эти данные.`);
+                    modalResult.innerHTML = `
+                        <div style="color: #28a745;">
+                            ✅ ${result.message || 'Заявка принята!'}<br><br>
+                            <strong>🔐 Ваши данные для входа:</strong><br>
+                            📌 Логин: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.login}</strong><br>
+                            🔑 Пароль: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.password}</strong><br><br>
+                            <strong>✏️ Редактировать заявку:</strong><br>
+                            🔗 <a href="/web_backend_8/edit.php" target="_blank" style="color: #28a745;">Нажмите сюда</a> чтобы войти и изменить данные.<br>
+                            <small style="color: #666;">Введите логин и пароль на открывшейся странице.</small>
+                        </div>
+                    `;
+                    modalResult.style.background = '#d4edda';
                     callbackForm.reset();
-                    closeModal();
+                    
+       
+                    setTimeout(() => {
+                        closeModal();
+                        modalResult.style.display = 'none';
+                    }, 8000);
                 } else {
                     let errors = '';
                     for (let field in result.errors) {
-                        errors += result.errors[field] + '\n';
+                        errors += `${result.errors[field]}<br>`;
                     }
-                    alert(`❌ Ошибка:\n${errors}`);
+                    modalResult.innerHTML = `<div style="color: #dc3545;">❌ ${errors}</div>`;
+                    modalResult.style.background = '#f8d7da';
                 }
             } catch (error) {
-                alert('❌ Ошибка соединения');
+                modalResult.innerHTML = '<div style="color: #dc3545;">❌ Ошибка соединения</div>';
+                modalResult.style.background = '#f8d7da';
             } finally {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
