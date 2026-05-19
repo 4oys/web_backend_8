@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         closeModal();
                         modalResult.style.display = 'none';
-                    }, 8000);
+                    }, 80000);
                 } else {
                     let errors = '';
                     for (let field in result.errors) {
