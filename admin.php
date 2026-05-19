@@ -120,7 +120,7 @@ $requests = getAllRequests($pdo);
 </head>
 <body>
 <div class="container">
-    <h1>🔐 Панель администратора - Заявки AutoFinder</h1>
+    <h1>Панель администратора - Заявки AutoFinder</h1>
     
     <?php if ($message): ?>
         <div class="message"><?= htmlspecialchars($message) ?></div>
