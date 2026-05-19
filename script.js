@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     
+
     const slider = document.querySelector('.slider');
     const slides = document.querySelectorAll('.slide');
     const prevBtn = document.querySelector('.prev-btn');
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSlider();
     }
 
+
     const dropdown = document.querySelector('.dropdown');
     const navItemWithDropdown = document.querySelector('.nav-item:has(.dropdown)');
     
@@ -77,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
     
@@ -93,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+
     const modal = document.getElementById('modal');
     const modalClose = document.getElementById('modalClose');
     const contactBtn = document.getElementById('contact-btn');
@@ -133,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape' && modal && modal.classList.contains('active')) closeModal();
     });
     
+
     document.querySelectorAll('.btn-price').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -191,6 +196,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+
     const mainForm = document.getElementById('mainForm');
     const apiResult = document.getElementById('apiResult');
     
@@ -222,10 +228,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success) {
                     apiResult.innerHTML = `
                         <div style="color: #28a745;">
-                            ✅ ${result.message || 'Заявка принята!'}<br>
-                            📌 Ваш логин: <strong>${result.login}</strong><br>
-                            🔑 Пароль: <strong>${result.password}</strong><br>
-                            <small>Сохраните эти данные для отслеживания статуса заявки</small>
+                            ✅ ${result.message || 'Заявка принята!'}<br><br>
+                            <strong>🔐 Ваши данные для входа:</strong><br>
+                            📌 Логин: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.login}</strong><br>
+                            🔑 Пароль: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.password}</strong><br><br>
+                            <strong>✏️ Редактировать заявку:</strong><br>
+                            🔗 <a href="/web_backend_8/edit.php" target="_blank" style="color: #28a745;">Нажмите сюда</a> чтобы войти и изменить данные.<br>
+                            <small style="color: #666;">Введите логин и пароль на открывшейся странице.</small>
                         </div>
                     `;
                     apiResult.style.background = '#d4edda';
@@ -245,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             setTimeout(() => {
                 apiResult.style.display = 'none';
-            }, 10000);
+            }, 30000);
         });
     }
 });
