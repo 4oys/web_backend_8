@@ -1,24 +1,8 @@
 <?php
-
 session_start();
 require_once 'config.php';
 
-$host = 'localhost';
-$dbname = 'u82564';
-$username = 'u82564';
-$password = '1341640';
-
-try {
-    $pdo = new PDO(
-        "mysql:host=$host;dbname=$dbname;charset=utf8mb4",
-        $username,
-        $password,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-} catch (PDOException $e) {
-    die("Ошибка подключения к базе данных: " . $e->getMessage());
-}
-
+$pdo = getDBConnection();
 $message = '';
 $error = '';
 $request = null;
@@ -26,21 +10,21 @@ $isAuthenticated = false;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'login') {
     $login = trim($_POST['login'] ?? '');
-    $password = trim($_POST['password'] ?? '');
+    $pass = trim($_POST['password'] ?? '');
     
-    if (empty($login) || empty($password)) {
+    if (empty($login) || empty($pass)) {
         $error = "Введите логин и пароль";
     } else {
         $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE login = ?");
         $stmt->execute([$login]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($user && password_verify($password, $user['password_hash'])) {
+        if ($user && password_verify($pass, $user['password_hash'])) {
             $_SESSION['edit_login'] = $user['login'];
             $_SESSION['edit_id'] = $user['id'];
             $isAuthenticated = true;
             $request = $user;
-            $message = "✅ Вы успешно вошли!";
+            $message = "Вы успешно вошли!";
         } else {
             $error = "Неверный логин или пароль";
         }
@@ -64,44 +48,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Неверный email";
         
         if (empty($errors)) {
-            $stmt = $pdo->prepare("
-                UPDATE autofinder_requests 
-                SET name = ?, phone = ?, email = ?, wishes = ?, updated_at = NOW()
-                WHERE id = ? AND login = ?
-            ");
+            $stmt = $pdo->prepare("UPDATE autofinder_requests SET name = ?, phone = ?, email = ?, wishes = ?, updated_at = NOW() WHERE id = ? AND login = ?");
             $stmt->execute([$name, $phone, $email, $wishes, $_SESSION['edit_id'], $_SESSION['edit_login']]);
-            $message = "✅ Заявка успешно обновлена!";
+            $message = "Заявка успешно обновлена!";
             
             $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ?");
             $stmt->execute([$_SESSION['edit_id']]);
             $request = $stmt->fetch();
         } else {
             $error = implode("<br>", $errors);
-            $request = [
-                'name' => $name,
-                'phone' => $phone,
-                'email' => $email,
-                'wishes' => $wishes
-            ];
+            $request = ['name' => $name, 'phone' => $phone, 'email' => $email, 'wishes' => $wishes];
         }
     }
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'logout') {
+    session_destroy();
+    $isAuthenticated = false;
+    $request = null;
+    $message = "Вы вышли из системы";
 }
 
 if (empty($request) && !empty($_SESSION['edit_login']) && !empty($_SESSION['edit_id'])) {
     $stmt = $pdo->prepare("SELECT * FROM autofinder_requests WHERE id = ? AND login = ?");
     $stmt->execute([$_SESSION['edit_id'], $_SESSION['edit_login']]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($request) {
-        $isAuthenticated = true;
-    }
+    if ($request) $isAuthenticated = true;
 }
 ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Редактирование заявки - AutoFinder</title>
+    <title>Редактирование заявки</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -128,10 +107,9 @@ if (empty($request) && !empty($_SESSION['edit_login']) && !empty($_SESSION['edit
             text-align: center;
         }
         .header h1 { font-size: 24px; margin-bottom: 8px; }
-        .header p { font-size: 14px; opacity: 0.9; }
         .form-body { padding: 32px; }
         .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #1f2937; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
         .required::after { content: " *"; color: #ef4444; }
         input, textarea {
             width: 100%;
@@ -139,26 +117,9 @@ if (empty($request) && !empty($_SESSION['edit_login']) && !empty($_SESSION['edit
             border: 2px solid #e5e7eb;
             border-radius: 12px;
             font-size: 15px;
-            font-family: inherit;
         }
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .message {
-            background: #dcfce7;
-            color: #16a34a;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-        .error {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
+        .message { background: #dcfce7; color: #16a34a; padding: 12px; border-radius: 12px; margin-bottom: 20px; }
+        .error { background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 12px; margin-bottom: 20px; }
         .btn {
             width: 100%;
             padding: 14px;
@@ -171,26 +132,15 @@ if (empty($request) && !empty($_SESSION['edit_login']) && !empty($_SESSION['edit
             cursor: pointer;
             margin-top: 16px;
         }
-        .btn:hover { transform: translateY(-2px); }
-        .btn-logout {
-            background: #ef4444;
-            margin-top: 10px;
-        }
+        .btn-logout { background: #ef4444; margin-top: 10px; }
         .btn-logout:hover { background: #dc2626; }
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #667eea;
-            text-decoration: none;
-            text-align: center;
-            width: 100%;
-        }
+        .back-link { display: block; margin-top: 20px; color: #667eea; text-align: center; text-decoration: none; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>✏️ Редактирование заявки</h1>
+        <h1>Редактирование заявки</h1>
         <p>Войдите, чтобы изменить свои данные</p>
     </div>
     
@@ -199,66 +149,51 @@ if (empty($request) && !empty($_SESSION['edit_login']) && !empty($_SESSION['edit
         <?php if ($message): ?>
             <div class="message"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
-        
         <?php if ($error): ?>
-            <div class="error">❌ <?= $error ?></div>
+            <div class="error"><?= $error ?></div>
         <?php endif; ?>
         
         <?php if (!$isAuthenticated): ?>
             <form method="POST">
                 <input type="hidden" name="action" value="login">
-                
                 <div class="form-group">
                     <label class="required">Логин</label>
-                    <input type="text" name="login" placeholder="Введите ваш логин" required>
+                    <input type="text" name="login" required>
                 </div>
-                
                 <div class="form-group">
                     <label class="required">Пароль</label>
-                    <input type="password" name="password" placeholder="Введите ваш пароль" required>
+                    <input type="password" name="password" required>
                 </div>
-                
-                <button type="submit" class="btn">🔐 Войти</button>
+                <button type="submit" class="btn">Войти</button>
             </form>
-            
         <?php else: ?>
             <form method="POST">
                 <input type="hidden" name="action" value="save">
-                
                 <div class="form-group">
                     <label class="required">Имя</label>
                     <input type="text" name="name" value="<?= htmlspecialchars($request['name']) ?>" required>
                 </div>
-                
                 <div class="form-group">
                     <label class="required">Телефон</label>
                     <input type="tel" name="phone" value="<?= htmlspecialchars($request['phone']) ?>" required>
                 </div>
-                
                 <div class="form-group">
                     <label class="required">Email</label>
                     <input type="email" name="email" value="<?= htmlspecialchars($request['email']) ?>" required>
                 </div>
-                
                 <div class="form-group">
-                    <label>Пожелания к авто</label>
+                    <label>Пожелания</label>
                     <textarea name="wishes" rows="4"><?= htmlspecialchars($request['wishes']) ?></textarea>
                 </div>
-                
-                <button type="submit" class="btn">💾 Сохранить изменения</button>
+                <button type="submit" class="btn">Сохранить изменения</button>
             </form>
-            
             <form method="POST">
                 <input type="hidden" name="action" value="logout">
-                <button type="submit" class="btn btn-logout">🚪 Выйти</button>
+                <button type="submit" class="btn btn-logout">Выйти</button>
             </form>
-            
         <?php endif; ?>
         
-        <div>
-            <a href="index.html" class="back-link">← Вернуться на главную</a>
-        </div>
-        
+        <a href="index.html" class="back-link">На главную</a>
     </div>
 </div>
 </body>
