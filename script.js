@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
     
-
     const slider = document.querySelector('.slider');
     const slides = document.querySelectorAll('.slide');
     const prevBtn = document.querySelector('.prev-btn');
@@ -52,7 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSlider();
     }
 
-
     const dropdown = document.querySelector('.dropdown');
     const navItemWithDropdown = document.querySelector('.nav-item:has(.dropdown)');
     
@@ -79,7 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
     
@@ -96,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-
     const modal = document.getElementById('modal');
     const modalClose = document.getElementById('modalClose');
     const contactBtn = document.getElementById('contact-btn');
@@ -137,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape' && modal && modal.classList.contains('active')) closeModal();
     });
     
-
     document.querySelectorAll('.btn-price').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -149,12 +144,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-
     const callbackForm = document.getElementById('callbackForm');
     const modalBody = document.querySelector('.modal-body');
     
     if (callbackForm && modalBody) {
-
         let modalResult = document.getElementById('modalResult');
         if (!modalResult) {
             modalResult = document.createElement('div');
@@ -183,9 +176,8 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = true;
             
             modalResult.style.display = 'block';
-            modalResult.innerHTML = '⏳ Отправка...';
+            modalResult.innerHTML = 'Отправка...';
             modalResult.style.background = '#e3f2fd';
-            modalResult.style.color = '#0d47a1';
             
             try {
                 const response = await fetch('/web_backend_8/api.php', {
@@ -198,33 +190,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success) {
                     modalResult.innerHTML = `
                         <div style="color: #28a745;">
-                            ✅ ${result.message || 'Заявка принята!'}<br><br>
-                            <strong>🔐 Ваши данные для входа:</strong><br>
-                            📌 Логин: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.login}</strong><br>
-                            🔑 Пароль: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.password}</strong><br><br>
-                            <strong>✏️ Редактировать заявку:</strong><br>
-                            🔗 <a href="/web_backend_8/edit.php" target="_blank" style="color: #28a745;">Нажмите сюда</a> чтобы войти и изменить данные.<br>
-                            <small style="color: #666;">Введите логин и пароль на открывшейся странице.</small>
+                            Заявка принята!<br><br>
+                            <strong>Логин:</strong> ${result.login}<br>
+                            <strong>Пароль:</strong> ${result.password}<br><br>
+                            <a href="/web_backend_8/edit.php" target="_blank">Редактировать заявку</a>
                         </div>
                     `;
                     modalResult.style.background = '#d4edda';
                     callbackForm.reset();
-                    
-       
-                    setTimeout(() => {
-                        closeModal();
-                        modalResult.style.display = 'none';
-                    }, 80000);
+                    setTimeout(() => closeModal(), 5000);
                 } else {
                     let errors = '';
                     for (let field in result.errors) {
-                        errors += `${result.errors[field]}<br>`;
+                        errors += result.errors[field] + '<br>';
                     }
-                    modalResult.innerHTML = `<div style="color: #dc3545;">❌ ${errors}</div>`;
+                    modalResult.innerHTML = `<div style="color: #dc3545;">${errors}</div>`;
                     modalResult.style.background = '#f8d7da';
                 }
             } catch (error) {
-                modalResult.innerHTML = '<div style="color: #dc3545;">❌ Ошибка соединения</div>';
+                modalResult.innerHTML = '<div style="color: #dc3545;">Ошибка соединения</div>';
                 modalResult.style.background = '#f8d7da';
             } finally {
                 submitBtn.textContent = originalText;
@@ -233,7 +217,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-
     const mainForm = document.getElementById('mainForm');
     const apiResult = document.getElementById('apiResult');
     
@@ -250,9 +233,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             
             apiResult.style.display = 'block';
-            apiResult.innerHTML = '⏳ Отправка...';
+            apiResult.innerHTML = 'Отправка...';
             apiResult.style.background = '#e3f2fd';
-            apiResult.style.color = '#0d47a1';
             
             try {
                 const response = await fetch('/web_backend_8/api.php', {
@@ -265,13 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success) {
                     apiResult.innerHTML = `
                         <div style="color: #28a745;">
-                            ✅ ${result.message || 'Заявка принята!'}<br><br>
-                            <strong>🔐 Ваши данные для входа:</strong><br>
-                            📌 Логин: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.login}</strong><br>
-                            🔑 Пароль: <strong style="background:#f0f0f0; padding:2px 8px; border-radius:5px;">${result.password}</strong><br><br>
-                            <strong>✏️ Редактировать заявку:</strong><br>
-                            🔗 <a href="/web_backend_8/edit.php" target="_blank" style="color: #28a745;">Нажмите сюда</a> чтобы войти и изменить данные.<br>
-                            <small style="color: #666;">Введите логин и пароль на открывшейся странице.</small>
+                            Заявка принята!<br><br>
+                            <strong>Логин:</strong> ${result.login}<br>
+                            <strong>Пароль:</strong> ${result.password}<br><br>
+                            <a href="/web_backend_8/edit.php" target="_blank">Редактировать заявку</a>
                         </div>
                     `;
                     apiResult.style.background = '#d4edda';
@@ -279,13 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     let errors = '';
                     for (let field in result.errors) {
-                        errors += `${result.errors[field]}<br>`;
+                        errors += result.errors[field] + '<br>';
                     }
-                    apiResult.innerHTML = `<div style="color: #dc3545;">❌ ${errors}</div>`;
+                    apiResult.innerHTML = `<div style="color: #dc3545;">${errors}</div>`;
                     apiResult.style.background = '#f8d7da';
                 }
             } catch (error) {
-                apiResult.innerHTML = '<div style="color: #dc3545;">❌ Ошибка соединения</div>';
+                apiResult.innerHTML = '<div style="color: #dc3545;">Ошибка соединения</div>';
                 apiResult.style.background = '#f8d7da';
             }
             
