@@ -12,10 +12,9 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 } catch (PDOException $e) {
-    die("Ошибка подключения к базе данных: " . $e->getMessage());
+    die("Ошибка подключения к базе данных");
 }
 
-// Получение всех заявок
 function getAllRequests($pdo) {
     $stmt = $pdo->query("SELECT * FROM autofinder_requests ORDER BY id DESC");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -30,7 +29,6 @@ function deleteRequest($pdo, $id) {
     }
 }
 
-// Создание таблицы администраторов (если нет)
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS admin_users (
         id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -47,11 +45,10 @@ if ($stmt->fetchColumn() == 0) {
     $pdo->prepare("INSERT INTO admin_users (login, password_hash) VALUES ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')")->execute();
 }
 
-// HTTP-авторизация
 if (empty($_SERVER['PHP_AUTH_USER']) || empty($_SERVER['PHP_AUTH_PW'])) {
     header('HTTP/1.1 401 Unauthorized');
     header('WWW-Authenticate: Basic realm="Admin Panel - AutoFinder"');
-    echo '<h1>🔐 Требуется авторизация</h1>';
+    echo '<h1>Требуется авторизация</h1>';
     exit();
 }
 
@@ -62,20 +59,19 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$admin || !password_verify($_SERVER['PHP_AUTH_PW'], $admin['password_hash'])) {
     header('HTTP/1.1 401 Unauthorized');
     header('WWW-Authenticate: Basic realm="Admin Panel - AutoFinder"');
-    echo '<h1>🔐 Неверный логин или пароль</h1>';
+    echo '<h1>Неверный логин или пароль</h1>';
     exit();
 }
 
-// Обработка удаления
 $message = '';
 $error = '';
 
-if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_id'])) {
+    $id = (int)$_POST['delete_id'];
     if (deleteRequest($pdo, $id)) {
-        $message = "✅ Заявка #{$id} успешно удалена";
+        $message = "Заявка #{$id} успешно удалена";
     } else {
-        $error = "❌ Ошибка при удалении заявки #{$id}";
+        $error = "Ошибка при удалении заявки #{$id}";
     }
 }
 
@@ -85,7 +81,7 @@ $requests = getAllRequests($pdo);
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Панель администратора - AutoFinder</title>
+    <title>Панель администратора</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -110,10 +106,10 @@ $requests = getAllRequests($pdo);
         .btn-delete {
             background: #ef4444;
             color: white;
+            border: none;
             padding: 6px 12px;
             border-radius: 8px;
-            text-decoration: none;
-            font-size: 13px;
+            cursor: pointer;
         }
         .btn-delete:hover { background: #dc2626; }
     </style>
@@ -135,7 +131,7 @@ $requests = getAllRequests($pdo);
         </thead>
         <tbody>
             <?php if (empty($requests)): ?>
-                <tr><td colspan="9" style="text-align: center;">📭 Нет заявок</td></tr>
+                <tr><td colspan="9" style="text-align: center;">Нет заявок</td></tr>
             <?php else: ?>
                 <?php foreach ($requests as $req): ?>
                 <tr>
@@ -147,7 +143,12 @@ $requests = getAllRequests($pdo);
                     <td><?= htmlspecialchars($req['status']) ?></td>
                     <td><?= htmlspecialchars($req['login']) ?></td>
                     <td><?= htmlspecialchars($req['created_at']) ?></td>
-                    <td><a href="?delete=<?= $req['id'] ?>" class="btn-delete" onclick="return confirm('Удалить?')">🗑️ Удалить</a></td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="delete_id" value="<?= $req['id'] ?>">
+                            <button type="submit" class="btn-delete" onclick="return confirm('Удалить заявку?')">Удалить</button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
